@@ -1,0 +1,12 @@
+{
+    "id": "{09F95B5C-488F-4F62-912C-06FF8647A20D}",
+    "name": "SIP Klingel",
+    "type": 3,
+    "vendor": "SIP",
+    "aliases": ["SIP", "VoIP", "Anruf", "Telefon"],
+    "parentRequirements": ["{8E4D9B23-E0F2-1E05-41D8-C21EA53B8706}"],
+    "childRequirements": [],
+    "implemented": ["{9082C662-7864-D5CA-863F-53999200D897}"],
+    "prefix": "SIPK",
+    "url": "https://github.com/Pfischi-Informatik/SymconSIPKlingel"
+}

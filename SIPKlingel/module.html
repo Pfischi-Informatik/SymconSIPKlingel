@@ -1,0 +1,79 @@
+<style>
+    html, body { height: 100%; margin: 0; }
+    #tile { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 8px; text-align: center; font-family: inherit; cursor: pointer; border-radius: 8px; }
+    #bell { font-size: 48px; line-height: 1; }
+    #caller { font-weight: 600; }
+    #hint { font-size: 12px; opacity: .7; }
+    #tile.ringing { animation: flash 1s steps(2, jump-none) infinite; color: #fff; }
+    #tile.ringing #bell { animation: shake .4s infinite alternate; }
+    @keyframes flash { from { background: #c62828; } to { background: #7f1d1d; } }
+    @keyframes shake { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+    @media (prefers-reduced-motion: reduce) {
+        #tile.ringing { animation: none; background: #c62828; }
+        #tile.ringing #bell { animation: none; }
+    }
+</style>
+<div id="tile" role="status" aria-live="assertive">
+    <div id="bell" aria-hidden="true">&#128276;</div>
+    <div id="state"></div>
+    <div id="caller"></div>
+    <div id="hint"></div>
+</div>
+<script>
+    // Browser spielen Ton erst nach einem Klick auf die Seite ab
+    let audio = null;
+    let ringTimer = null;
+    let last = { ringing: false, caller: '', registered: false };
+
+    function beep(start, frequency) {
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.25, start);
+        gain.gain.setValueAtTime(0, start + 0.35);
+        osc.connect(gain).connect(audio.destination);
+        osc.start(start);
+        osc.stop(start + 0.4);
+    }
+
+    function ringOnce() {
+        if (audio && audio.state === 'running') {
+            const t = audio.currentTime;
+            beep(t, 880);
+            beep(t + 0.45, 660);
+        }
+    }
+
+    function render() {
+        const soundReady = audio && audio.state === 'running';
+        document.getElementById('tile').classList.toggle('ringing', last.ringing);
+        document.getElementById('state').textContent = last.ringing
+            ? 'Es klingelt'
+            : (last.registered ? 'Bereit' : 'Nicht angemeldet');
+        document.getElementById('caller').textContent = last.caller ? last.caller : '';
+        document.getElementById('hint').textContent = soundReady ? '' : 'Antippen, um den Ton zu aktivieren';
+
+        if (last.ringing && !ringTimer) {
+            ringOnce();
+            ringTimer = setInterval(ringOnce, 2500);
+        } else if (!last.ringing && ringTimer) {
+            clearInterval(ringTimer);
+            ringTimer = null;
+        }
+    }
+
+    function handleMessage(data) {
+        last = typeof data === 'string' ? JSON.parse(data) : data;
+        render();
+    }
+
+    document.getElementById('tile').addEventListener('click', async () => {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        await audio.resume();
+        if (last.ringing) {
+            ringOnce();
+        }
+        render();
+    });
+</script>

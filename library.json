@@ -1,0 +1,12 @@
+{
+    "id": "{F24609CA-18D9-41F2-B103-88F47633C225}",
+    "author": "Dominik Pfister",
+    "name": "SIP Klingel",
+    "url": "https://github.com/Pfischi-Informatik/SymconSIPKlingel",
+    "compatibility": {
+        "version": "7.1"
+    },
+    "version": "1.0",
+    "build": 1,
+    "date": 0
+}

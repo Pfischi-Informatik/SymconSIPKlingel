@@ -1,0 +1,27 @@
+{
+    "elements": [
+        { "type": "ValidationTextBox", "name": "Provider", "caption": "SIP-Provider (z.B. sipgate.de)" },
+        { "type": "NumberSpinner", "name": "Port", "caption": "Port (0 = per DNS ermitteln)", "minimum": 0, "maximum": 65535 },
+        { "type": "ValidationTextBox", "name": "Username", "caption": "Benutzername" },
+        { "type": "PasswordTextBox", "name": "Password", "caption": "Passwort" },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Experten",
+            "items": [
+                { "type": "ValidationTextBox", "name": "AuthID", "caption": "Anmeldename, falls vom Benutzernamen abweichend" },
+                { "type": "NumberSpinner", "name": "LocalPort", "caption": "Lokaler UDP-Port", "minimum": 1024, "maximum": 65535 }
+            ]
+        }
+    ],
+    "actions": [
+        { "type": "Button", "caption": "Jetzt anmelden", "onClick": "echo SIPK_Register($id) ? 'Anmeldung gesendet, Status pruefen' : 'UDP Socket nicht aktiv';" },
+        { "type": "Button", "caption": "Klingeln testen (5 Sekunden)", "onClick": "SIPK_TestRing($id);" }
+    ],
+    "status": [
+        { "code": 102, "icon": "active", "caption": "Beim Provider angemeldet" },
+        { "code": 104, "icon": "inactive", "caption": "Provider, Benutzername und Passwort eintragen" },
+        { "code": 201, "icon": "error", "caption": "Provider lehnt Benutzername oder Passwort ab" },
+        { "code": 202, "icon": "error", "caption": "Provider antwortet nicht" },
+        { "code": 203, "icon": "error", "caption": "Provider verweigert die Anmeldung" }
+    ]
+}
