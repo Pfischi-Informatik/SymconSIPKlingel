@@ -21,6 +21,7 @@
                 }
             ]
         },
+        { "type": "ValidationTextBox", "name": "AnswerTarget", "caption": "Annehmen leitet weiter an (Nummer oder SIP-Adresse)" },
         {
             "type": "ExpansionPanel",
             "caption": "Experten",

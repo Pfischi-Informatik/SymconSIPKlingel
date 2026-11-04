@@ -6,9 +6,10 @@ declare(strict_types=1);
  * SIP Klingel - IP-Symcon Modul
  * -----------------------------
  * Meldet sich per SIP (UDP) beim Provider an und meldet eingehende Anrufe:
- * Variable "Klingelt", Anrufer und Klingelton auf der Kachel. Der Anruf wird
- * nie angenommen, deshalb gibt es weder Audio noch WebRTC und die Meldung
- * kommt ohne Umweg direkt aus dem UDP-Paket.
+ * Variable "Klingelt", Anrufer, Klingelton und Anrufdialog auf der Kachel.
+ * Das Modul spricht nie selbst: Annehmen leitet den Anruf per 302 an ein Telefon
+ * weiter, Ablehnen beendet ihn mit 603. Deshalb gibt es weder Audio noch WebRTC,
+ * und die Meldung kommt ohne Umweg direkt aus dem UDP-Paket.
  *
  * Protokoll: RFC 3261 (SIP), RFC 7616/2617 (Digest), RFC 3581 (rport).
  */
@@ -25,6 +26,11 @@ class SIPKlingel extends IPSModule
     private const RING_LIMIT = 120;     // Notbremse, falls das CANCEL verloren geht
     private const TEST_LIMIT = 5;
     private const ENDED_KEEP = 32;      // Wiederholungen beendeter Anrufe noch beantworten
+
+    private const REASONS = [
+        302 => 'Moved Temporarily', 480 => 'Temporarily Unavailable',
+        487 => 'Request Terminated', 603 => 'Decline',
+    ];
 
     private const COMPACT = [
         'i' => 'call-id', 'f' => 'from', 't' => 'to', 'v' => 'via',
@@ -46,6 +52,7 @@ class SIPKlingel extends IPSModule
         $this->RegisterPropertyString('AuthID', '');
         $this->RegisterPropertyInteger('LocalPort', 5070);
         $this->RegisterPropertyString('Visualizations', '[]');
+        $this->RegisterPropertyString('AnswerTarget', '');
 
         $this->RegisterAttributeString('CallID', '');
         $this->RegisterAttributeString('Tag', '');
@@ -207,6 +214,22 @@ class SIPKlingel extends IPSModule
         }
     }
 
+    public function RequestAction($Ident, $Value)
+    {
+        switch ($Ident) {
+            case 'Accept':
+                if ($this->answerUri() !== '') {
+                    $this->locked(fn () => $this->finishRinging(302));
+                }
+                return;
+            case 'Reject':
+                $this->locked(fn () => $this->finishRinging(603));
+                return;
+            default:
+                throw new Exception('Invalid Ident');
+        }
+    }
+
     // =====================================================================
     // Empfang
     // =====================================================================
@@ -365,7 +388,7 @@ class SIPKlingel extends IPSModule
                     if ($call['final'] === 0) {
                         $this->reply($call, $ip, $port, 180, 'Ringing');
                     } else {
-                        $this->reply($call, $ip, $port, $call['final'], $call['final'] === 487 ? 'Request Terminated' : 'Temporarily Unavailable');
+                        $this->reply($call, $ip, $port, $call['final'], self::REASONS[$call['final']], $call['contact'] ?? '');
                     }
                     return;
                 }
@@ -406,6 +429,38 @@ class SIPKlingel extends IPSModule
         }
     }
 
+    // ponytail: gilt fuer alle klingelnden Anrufe, der Dialog zeigt nur den neuesten
+    private function finishRinging(int $code): void
+    {
+        $contact = $code === 302 ? $this->answerUri() : '';
+        $calls = $this->calls();
+        foreach ($calls as $id => $call) {
+            if ($call['final'] !== 0) {
+                continue;
+            }
+            if (empty($call['test'])) {
+                $this->reply($call, $call['ip'], $call['port'], $code, self::REASONS[$code], $contact);
+            }
+            $calls[$id]['final'] = $code;
+            $calls[$id]['contact'] = $contact;
+            $calls[$id]['ended'] = time();
+        }
+        $this->storeCalls($calls);
+    }
+
+    // Interne Nummer oder vollstaendige SIP-Adresse, landet im Contact-Header
+    private function answerUri(): string
+    {
+        $target = trim($this->ReadPropertyString('AnswerTarget'));
+        if (!preg_match('/^(sips?:)?[^\s<>"]+$/i', $target)) {
+            return '';
+        }
+        if (preg_match('/^sips?:/i', $target)) {
+            return $target;
+        }
+        return 'sip:' . $target . (strpos($target, '@') === false ? '@' . $this->ReadPropertyString('Provider') : '');
+    }
+
     // Eigener Thread: Der Push darf das Auflegen (CANCEL) nicht aufhalten
     private function startNotify(): void
     {
@@ -423,7 +478,7 @@ class SIPKlingel extends IPSModule
         ];
     }
 
-    private function reply(array $d, string $ip, int $port, int $code, string $reason): void
+    private function reply(array $d, string $ip, int $port, int $code, string $reason, string $contact = ''): void
     {
         // Das To-Tag ist aus der Call-ID abgeleitet und damit bei Wiederholungen gleich
         $to = stripos($d['to'], ';tag=') === false ? $d['to'] . ';tag=' . substr(md5($d['id']), 0, 10) : $d['to'];
@@ -438,7 +493,7 @@ class SIPKlingel extends IPSModule
             "To: $to",
             "Call-ID: {$d['id']}",
             "CSeq: {$d['cseq']}",
-            'Contact: <' . $this->contactUri() . '>',
+            'Contact: <' . ($contact ?: $this->contactUri()) . '>',
             'User-Agent: Symcon SIP Klingel',
             'Content-Length: 0'
         );
@@ -662,6 +717,7 @@ class SIPKlingel extends IPSModule
             'ringing'    => (bool) $this->GetValue('Ringing'),
             'caller'     => (string) $this->GetValue('Caller'),
             'registered' => (bool) $this->GetValue('Registered'),
+            'canAccept'  => $this->answerUri() !== '',
         ];
     }
 

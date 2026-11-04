@@ -319,6 +319,43 @@ $m->CheckCalls();
 assert($m->GetValue('Ringing') === false);
 $m->CheckCalls();
 
+// Dialog: Ablehnen
+packet($m, invite('d1', '<sip:100@p>'));
+$m->RequestAction('Reject', true);
+assert($m->GetValue('Ringing') === false && str_starts_with(lastRaw($m), 'SIP/2.0 603 Decline'));
+packet($m, invite('d1', '<sip:100@p>'));
+assert(str_starts_with(lastRaw($m), 'SIP/2.0 603'), 'Wiederholung bekommt dieselbe Antwort');
+$count = count($m->sent);
+$m->RequestAction('Reject', true);
+assert(count($m->sent) === $count, 'zweiter Klick in einer anderen Visualisierung sendet nichts');
+
+// Dialog: Annehmen ohne Ziel tut nichts, die Kachel zeigt den Knopf dann nicht
+packet($m, invite('d2', '<sip:100@p>'));
+$m->RequestAction('Accept', true);
+assert($m->GetValue('Ringing') === true);
+
+// Annehmen leitet weiter, auch bei wiederholtem INVITE
+$m->SetProperty('AnswerTarget', '100');
+$m->RequestAction('Accept', true);
+assert($m->GetValue('Ringing') === false);
+assert(str_starts_with(lastRaw($m), 'SIP/2.0 302 Moved') && headerOf(lastRaw($m), 'Contact') === '<sip:100@sip.example.test>');
+packet($m, invite('d2', '<sip:100@p>'));
+assert(str_starts_with(lastRaw($m), 'SIP/2.0 302') && headerOf(lastRaw($m), 'Contact') === '<sip:100@sip.example.test>');
+
+// Ziel: fertige SIP-Adresse bleibt, Header-Einschleusung wird abgewiesen
+$uri = new ReflectionMethod(SIPKlingel::class, 'answerUri');
+$m->SetProperty('AnswerTarget', 'sip:a@b.test');
+assert($uri->invoke($m) === 'sip:a@b.test');
+$m->SetProperty('AnswerTarget', "100\r\nX: y");
+assert($uri->invoke($m) === '');
+$m->SetProperty('AnswerTarget', '');
+
+// Testanruf endet ohne Paket
+$m->TestRing();
+$count = count($m->sent);
+$m->RequestAction('Reject', true);
+assert($m->GetValue('Ringing') === false && count($m->sent) === $count);
+
 // OPTIONS und Keepalive stoeren nicht
 packet($m, "OPTIONS sip:x SIP/2.0\r\nVia: SIP/2.0/UDP 198.51.100.7;branch=z\r\nFrom: <sip:a@p>;tag=a\r\nTo: <sip:me@p>\r\nCall-ID: o\r\nCSeq: 1 OPTIONS\r\n\r\n");
 assert(str_starts_with(lastRaw($m), 'SIP/2.0 200'));
