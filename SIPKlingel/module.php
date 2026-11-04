@@ -45,7 +45,7 @@ class SIPKlingel extends IPSModule
         $this->RegisterPropertyString('Password', '');
         $this->RegisterPropertyString('AuthID', '');
         $this->RegisterPropertyInteger('LocalPort', 5070);
-        $this->RegisterPropertyInteger('Visualization', 0);
+        $this->RegisterPropertyString('Visualizations', '[]');
 
         $this->RegisterAttributeString('CallID', '');
         $this->RegisterAttributeString('Tag', '');
@@ -191,17 +191,19 @@ class SIPKlingel extends IPSModule
 
     public function Notify(): void
     {
-        $visu = $this->ReadPropertyInteger('Visualization');
-        if ($visu === 0 || !IPS_InstanceExists($visu)) {
-            return;
-        }
         $caller = (string) $this->GetValue('Caller');
-        // Oeffnet die Kachel in allen offenen Visualisierungen, sofort und ohne Abo
-        $opened = @VISU_OpenObject($visu, $this->InstanceID, '');
-        // Push fuer geschlossene Apps, laeuft ueber Apple/Google und kann verzoegert sein
-        $pushed = @VISU_PostNotificationEx($visu, 'Anruf', $caller, 'Phone', 'bell', $this->InstanceID);
-        if ($opened === false || $pushed === false) {
-            $this->LogMessage('Meldung fehlgeschlagen: Liegt die Instanz in der Visualisierung, und ist das Abo fuer Push aktiv?', KL_WARNING);
+        $rows = json_decode($this->ReadPropertyString('Visualizations'), true) ?: [];
+        foreach (array_unique(array_column($rows, 'InstanceID')) as $visu) {
+            if (!IPS_InstanceExists($visu)) {
+                continue;
+            }
+            // Oeffnet die Kachel in allen offenen Visualisierungen, sofort und ohne Abo
+            $opened = @VISU_OpenObject($visu, $this->InstanceID, '');
+            // Push fuer geschlossene Apps, laeuft ueber Apple/Google und kann verzoegert sein
+            $pushed = @VISU_PostNotificationEx($visu, 'Anruf', $caller, 'Phone', 'bell', $this->InstanceID);
+            if ($opened === false || $pushed === false) {
+                $this->LogMessage("Meldung an Visualisierung $visu fehlgeschlagen: Liegt die Instanz dort, und ist das Abo fuer Push aktiv?", KL_WARNING);
+            }
         }
     }
 

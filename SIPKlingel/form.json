@@ -4,7 +4,23 @@
         { "type": "NumberSpinner", "name": "Port", "caption": "Port (0 = per DNS ermitteln)", "minimum": 0, "maximum": 65535 },
         { "type": "ValidationTextBox", "name": "Username", "caption": "Benutzername" },
         { "type": "PasswordTextBox", "name": "Password", "caption": "Passwort" },
-        { "type": "SelectModule", "name": "Visualization", "caption": "Meldung an Visualisierung", "moduleID": "{B5B875BB-9B76-45FD-4E67-2607E45B3AC4}" },
+        {
+            "type": "List",
+            "name": "Visualizations",
+            "caption": "Meldung an Visualisierungen",
+            "rowCount": 4,
+            "add": true,
+            "delete": true,
+            "columns": [
+                {
+                    "caption": "Visualisierung",
+                    "name": "InstanceID",
+                    "width": "auto",
+                    "add": 0,
+                    "edit": { "type": "SelectInstance", "validModules": ["{B5B875BB-9B76-45FD-4E67-2607E45B3AC4}"] }
+                }
+            ]
+        },
         {
             "type": "ExpansionPanel",
             "caption": "Experten",

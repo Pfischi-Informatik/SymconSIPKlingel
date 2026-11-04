@@ -29,7 +29,7 @@ function IPS_SetVariableProfileValues($n, $min, $max, $step) {}
 function IPS_SetVariableProfileText($n, $prefix, $suffix) {}
 function IPS_SetVariableProfileIcon($n, $icon) {}
 function IPS_GetKernelRunlevel() { return KR_READY; }
-function IPS_InstanceExists($i) { return $i === 777; }
+function IPS_InstanceExists($i) { return $i === 777 || $i === 778; }
 function VISU_OpenObject($v, $o, $t) { global $visu; $visu[] = ['open', $v, $o]; return true; }
 function VISU_PostNotificationEx($v, $title, $text, $icon, $sound, $target) { global $visu; $visu[] = ['push', $text, $sound, $target]; return true; }
 function IPS_SemaphoreEnter($n, $t) { return true; }
@@ -264,10 +264,12 @@ assert(count($m->once) === 1 && str_contains($m->once[0], 'SIPK_Notify'), 'Meldu
 $visu = [];
 $m->Notify();
 assert($visu === [], 'ohne Visualisierung keine Meldung');
-$m->SetProperty('Visualization', 777);
+$m->SetProperty('Visualizations', json_encode([['InstanceID' => 777], ['InstanceID' => 778], ['InstanceID' => 777], ['InstanceID' => 0]]));
 $m->Notify();
 assert($visu[0] === ['open', 777, $m->InstanceID]);
 assert($visu[1] === ['push', 'Max Muster (+41791234567)', 'bell', $m->InstanceID]);
+assert($visu[2] === ['open', 778, $m->InstanceID]);
+assert($visu[3][0] === 'push' && count($visu) === 4, 'jede Visualisierung genau einmal, leere Zeile ignoriert');
 
 // Wiederholtes INVITE ist kein neuer Anruf
 $stamp = $m->GetValue('LastCall');
