@@ -45,6 +45,7 @@ class SIPKlingel extends IPSModule
         $this->RegisterPropertyString('Password', '');
         $this->RegisterPropertyString('AuthID', '');
         $this->RegisterPropertyInteger('LocalPort', 5070);
+        $this->RegisterPropertyInteger('Visualization', 0);
 
         $this->RegisterAttributeString('CallID', '');
         $this->RegisterAttributeString('Tag', '');
@@ -184,7 +185,24 @@ class SIPKlingel extends IPSModule
             $calls['test-' . time()] = ['started' => time(), 'final' => 0, 'test' => true];
             $this->SetValue('Caller', 'Test');
             $this->storeCalls($calls);
+            $this->startNotify();
         });
+    }
+
+    public function Notify(): void
+    {
+        $visu = $this->ReadPropertyInteger('Visualization');
+        if ($visu === 0 || !IPS_InstanceExists($visu)) {
+            return;
+        }
+        $caller = (string) $this->GetValue('Caller');
+        // Oeffnet die Kachel in allen offenen Visualisierungen, sofort und ohne Abo
+        $opened = @VISU_OpenObject($visu, $this->InstanceID, '');
+        // Push fuer geschlossene Apps, laeuft ueber Apple/Google und kann verzoegert sein
+        $pushed = @VISU_PostNotificationEx($visu, 'Anruf', $caller, 'Phone', 'bell', $this->InstanceID);
+        if ($opened === false || $pushed === false) {
+            $this->LogMessage('Meldung fehlgeschlagen: Liegt die Instanz in der Visualisierung, und ist das Abo fuer Push aktiv?', KL_WARNING);
+        }
     }
 
     // =====================================================================
@@ -355,6 +373,7 @@ class SIPKlingel extends IPSModule
                 $this->SetValue('Caller', $this->callerName($msg));
                 $this->SetValue('LastCall', time());
                 $this->storeCalls($calls);
+                $this->startNotify();
                 return;
 
             case 'CANCEL':
@@ -383,6 +402,12 @@ class SIPKlingel extends IPSModule
             default:
                 $this->reply($this->dialog($msg), $ip, $port, 501, 'Not Implemented');
         }
+    }
+
+    // Eigener Thread: Der Push darf das Auflegen (CANCEL) nicht aufhalten
+    private function startNotify(): void
+    {
+        $this->RegisterOnceTimer('SIPKNotify', 'SIPK_Notify($_IPS[\'TARGET\']);');
     }
 
     private function dialog(array $msg): array

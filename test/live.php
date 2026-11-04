@@ -29,6 +29,9 @@ function IPS_SetVariableProfileValues($n, $min, $max, $step) {}
 function IPS_SetVariableProfileText($n, $prefix, $suffix) {}
 function IPS_SetVariableProfileIcon($n, $icon) {}
 function IPS_GetKernelRunlevel() { return KR_READY; }
+function IPS_InstanceExists($i) { return $i === 777; }
+function VISU_OpenObject($v, $o, $t) { global $visu; $visu[] = ['open', $v, $o]; return true; }
+function VISU_PostNotificationEx($v, $title, $text, $icon, $sound, $target) { global $visu; $visu[] = ['push', $text, $sound, $target]; return true; }
 function IPS_SemaphoreEnter($n, $t) { return true; }
 function IPS_SemaphoreLeave($n) { return true; }
 
@@ -70,6 +73,8 @@ class IPSModule
     public function GetValue($i) { return $this->values[$i]; }
     protected function SetStatus($s) { $this->status = $s; }
     public $sent = [], $wire = null;
+    public $once = [];
+    protected function RegisterOnceTimer($n, $s) { $this->once[] = $s; }
     protected function ForceParent($g) {}
     protected function SetVisualizationType($t) {}
     protected function UpdateVisualizationValue($v) {}
@@ -255,11 +260,20 @@ assert(end($m->sent)['ClientIP'] === '198.51.100.7');
 assert($m->GetValue('Ringing') === true && $m->GetValue('Caller') === 'Max Muster (+41791234567)');
 assert($m->GetValue('LastCall') > 0);
 assert($m->timers['SIPKCalls'] === 1000);
+assert(count($m->once) === 1 && str_contains($m->once[0], 'SIPK_Notify'), 'Meldung im eigenen Thread');
+$visu = [];
+$m->Notify();
+assert($visu === [], 'ohne Visualisierung keine Meldung');
+$m->SetProperty('Visualization', 777);
+$m->Notify();
+assert($visu[0] === ['open', 777, $m->InstanceID]);
+assert($visu[1] === ['push', 'Max Muster (+41791234567)', 'bell', $m->InstanceID]);
 
 // Wiederholtes INVITE ist kein neuer Anruf
 $stamp = $m->GetValue('LastCall');
 packet($m, invite('c1', '"Max Muster" <sip:+41791234567@p>'));
 assert(str_starts_with(lastRaw($m), 'SIP/2.0 180') && count(json_decode($m->ReadAttributeString('Calls'), true)) === 1);
+assert(count($m->once) === 1, 'Wiederholung meldet nicht nochmal');
 
 // Parallel zweiter Anruf, erstes CANCEL laesst weiterklingeln
 packet($m, invite('c2', '<sip:anonymous@anonymous.invalid>'));

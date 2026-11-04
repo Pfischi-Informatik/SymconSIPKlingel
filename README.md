@@ -13,6 +13,7 @@ Der Ordner `SymconSIPKlingel` gehört nach `/Library/Application Support/Symcon/
 | SIP-Provider | Domain des Providers, z.B. `sipgate.de` |
 | Port | Normalerweise 5060, bei 0 wird der Server per DNS (SRV) gesucht |
 | Benutzername, Passwort | SIP-Zugangsdaten des Anschlusses |
+| Meldung an Visualisierung | Öffnet die Kachel beim Anruf in allen offenen Visualisierungen und schickt einen Push aufs Handy |
 | Anmeldename (Experten) | Nur eintragen, wenn der Provider einen abweichenden Namen verlangt |
 | Lokaler UDP-Port (Experten) | Standard 5070, pro Instanz ein eigener Port |
 
@@ -28,6 +29,10 @@ Der Ordner `SymconSIPKlingel` gehört nach `/Library/Application Support/Symcon/
 ## Kachel
 
 Die Kachel blinkt beim Anruf und zeigt den Anrufer. Browser geben Ton erst nach einem Klick frei: Die Kachel nach jedem Neuladen einmal antippen, sonst blinkt sie nur. Soll es zuverlässig hörbar klingeln, die Variable `Ringing` per Ereignis an einen Gong oder Lautsprecher koppeln.
+
+Für die Meldung muss die Instanz in der gewählten Visualisierung sichtbar sein, sonst schlägt sie fehl (siehe Symcon-Log). Push braucht ein aktives Symcon-Abo und ein dort registriertes Gerät; er läuft über Apple/Google und kann sich verzögern.
+
+Das Modul nimmt Anrufe nicht an. Gesprochen wird über ein Telefon oder den Softphone-Client der Anlage.
 
 ## Funktionen
 
