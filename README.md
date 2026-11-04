@@ -35,6 +35,10 @@ Für die Meldung muss die Instanz in jeder gewählten Visualisierung sichtbar se
 
 Sprechen in der Visualisierung kann das Modul nicht. Im Browser braucht das Mikrofon HTTPS, und ob die App einer Modul-Kachel das Mikrofon gibt, ist ungeprüft. Das WebRTC von Symcon gehört zum eingebauten Modul „Türsprechanlage“. Das Weiterleitungsziel klingelt nach dem Annehmen und muss dort abgenommen werden. Die Anlage muss SIP-Weiterleitungen (302) befolgen.
 
+## Mikrofon-Test
+
+Der Knopf „Mikrofon testen“ auf der Kachel prüft, ob die Kachel auf diesem Gerät ans Mikrofon darf. Das Ergebnis steht auf der Kachel und im Symcon-Log (`Mikrofon-Test`).
+
 ## Funktionen
 
 ```php

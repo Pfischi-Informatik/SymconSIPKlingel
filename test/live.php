@@ -350,6 +350,11 @@ $m->SetProperty('AnswerTarget', "100\r\nX: y");
 assert($uri->invoke($m) === '');
 $m->SetProperty('AnswerTarget', '');
 
+// Mikrofon-Test landet gekuerzt im Log und sendet nichts
+$count = count($m->sent);
+$m->RequestAction('MicTest', 'Mikrofon geht');
+assert(count($m->sent) === $count);
+
 // Testanruf endet ohne Paket
 $m->TestRing();
 $count = count($m->sent);

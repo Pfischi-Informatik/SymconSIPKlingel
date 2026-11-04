@@ -225,6 +225,9 @@ class SIPKlingel extends IPSModule
             case 'Reject':
                 $this->locked(fn () => $this->finishRinging(603));
                 return;
+            case 'MicTest':
+                $this->LogMessage('Mikrofon-Test: ' . mb_substr((string) $Value, 0, 300), KL_MESSAGE);
+                return;
             default:
                 throw new Exception('Invalid Ident');
         }
